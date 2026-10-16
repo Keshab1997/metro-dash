@@ -71,8 +71,8 @@ class GamePainter extends CustomPainter {
     }
 
     view.skyline.paint(canvas, size, p, view.assets);
-    view.track.paint(canvas, size, p);
-    view.environment.paint(canvas, p, view.time);
+    view.track.paint(canvas, size, p, view.assets);
+    view.environment.paint(canvas, p, view.time, view.assets);
     _paintObstacles(canvas, p);
     _paintCoins(canvas, p);
     _paintRunner(canvas, p);
@@ -104,10 +104,65 @@ class GamePainter extends CustomPainter {
     }
   }
 
+  /// Draws a sprite standing on the ground plane: bottom edge at y = 0,
+  /// centred on `x`, `worldH` world units tall, aspect preserved.
+  void _drawSprite(
+      Canvas canvas, ui.Image image, double x, double z, double worldH,
+      {double alpha = 1}) {
+    final base = p0.project(x, 0, z);
+    final h = worldH * base.scale;
+    final w = h * image.width / image.height;
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Rect.fromLTWH(base.screen.dx - w / 2, base.screen.dy - h, w, h),
+      alpha >= 1
+          ? Paint()
+          : (Paint()
+            ..color = Color.fromARGB((255 * alpha).round(), 255, 255, 255)),
+    );
+  }
+
+  /// The projection currently being painted — set in `paint`, read by helpers.
+  late Projection p0;
+
   void _paintObstacle(Canvas canvas, Projection p, Obstacle o) {
     final laneX = Tune.laneX[o.lane];
     final fade = p.fadeAt(o.z);
     final paint = Paint();
+    p0 = p;
+
+    final sprite = view.assets?.sprite(switch (o.kind) {
+      ObstacleKind.barrierLow => 'barrier_low',
+      ObstacleKind.barrierHigh => 'barrier_high',
+      ObstacleKind.train => 'train',
+      ObstacleKind.cones => 'cones',
+    });
+    if (sprite != null) {
+      // The visual height is the obstacle's hitbox height, so what the player
+      // sees is exactly what the collision rules use.
+      final visualH = switch (o.kind) {
+        ObstacleKind.barrierLow => 0.42,
+        ObstacleKind.barrierHigh => 2.70,
+        ObstacleKind.train => 1.85,
+        ObstacleKind.cones => 0.62,
+      };
+      final sway = o.kind == ObstacleKind.barrierHigh
+          ? math.sin(view.time * 1.7 + o.id) * 0.05
+          : 0.0;
+      _drawSprite(canvas, sprite, laneX + sway, o.z, visualH, alpha: fade);
+      // ground contact shadow
+      final base = p.project(laneX, 0, o.z);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: base.screen,
+          width: visualH * base.scale * 0.9,
+          height: visualH * base.scale * 0.22,
+        ),
+        paint..color = const Color(0x330D2420),
+      );
+      return;
+    }
 
     switch (o.kind) {
       case ObstacleKind.barrierLow:
@@ -228,6 +283,7 @@ class GamePainter extends CustomPainter {
   // ---- coins ---------------------------------------------------------------
   void _paintCoins(Canvas canvas, Projection p) {
     final paint = Paint();
+    final coinSprite = view.assets?.sprite(GameAssets.coinKey);
     for (final c in view.coins) {
       if (c.taken) continue;
       final dz = c.z - p.camZ;
@@ -235,6 +291,28 @@ class GamePainter extends CustomPainter {
       final pos = p.project(Tune.laneX[c.lane], c.y, c.z);
       final fade = p.fadeAt(c.z);
       final r = 0.23 * pos.scale;
+
+      if (coinSprite != null) {
+        canvas.drawCircle(
+          pos.screen,
+          r * 1.5,
+          paint..color = Pal.coin.withValues(alpha: 0.18 * fade),
+        );
+        final h = r * 2.05;
+        final w = h * coinSprite.width / coinSprite.height;
+        canvas.drawImageRect(
+          coinSprite,
+          Rect.fromLTWH(
+              0, 0, coinSprite.width.toDouble(), coinSprite.height.toDouble()),
+          Rect.fromCenter(center: pos.screen, width: w, height: h),
+          fade >= 0.99
+              ? Paint()
+              : (Paint()
+                ..color = Color.fromARGB((255 * fade).round(), 255, 255, 255)),
+        );
+        continue;
+      }
+
       final spin = math.sin(view.time * 4.6 + c.z * 0.8).abs();
       final w = (r * (0.25 + 0.75 * spin)).clamp(r * 0.2, r);
       final rect =

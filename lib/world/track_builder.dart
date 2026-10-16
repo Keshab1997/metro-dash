@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../core/assets.dart';
 import '../core/config.dart';
 import '../core/palette.dart';
 import '../game/projection.dart';
@@ -20,7 +21,7 @@ class TrackBuilder {
   final Paint _parapetFace = Paint()..color = Pal.concrete;
   final Paint _parapetTop = Paint()..color = Pal.paper;
 
-  void paint(Canvas canvas, Size size, Projection p) {
+  void paint(Canvas canvas, Size size, Projection p, GameAssets? assets) {
     final near = p.nearZ;
     final far = p.camZ + Tune.viewFar;
     final shoulder = Tune.trackHalf + 0.45;
@@ -37,9 +38,24 @@ class TrackBuilder {
     // ---- ballast bed -------------------------------------------------------
     canvas.drawPath(
         p.groundQuad(-shoulder, shoulder, near, far, 0.02), _shoulder);
-    canvas.drawPath(
-        p.groundQuad(-Tune.trackHalf, Tune.trackHalf, near, far, 0.03),
-        _ballastBed);
+    final ballast = assets?.sprite(GameAssets.ballastKey);
+    final bed = p.groundQuad(-Tune.trackHalf, Tune.trackHalf, near, far, 0.03);
+    if (ballast != null) {
+      // The generated gravel texture, tiled in screen space. The bed is seen
+      // at a grazing angle, so one scale reads correctly for the corridor.
+      canvas.drawPath(
+        bed,
+        Paint()
+          ..shader = ImageShader(
+            ballast,
+            TileMode.mirror,
+            TileMode.mirror,
+            (Matrix4.identity()..scaleByDouble(0.42, 0.42, 1, 1)).storage,
+          ),
+      );
+    } else {
+      canvas.drawPath(bed, _ballastBed);
+    }
 
     // ---- sleepers: far → near so overlaps resolve correctly ----------------
     final sleeperEnd = math.min(far, p.camZ + Tune.sleeperReach);

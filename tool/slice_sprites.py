@@ -76,11 +76,64 @@ def align(img: Image.Image, height: int, pad_bottom: int = 0, pad_side: int = 2)
     return canvas
 
 
+def split_sheet(img: Image.Image, min_gap: int = 14, alpha_threshold: int = 12) -> list[Image.Image]:
+    """Split a sheet of props laid out in one row on chroma green.
+
+    Columns that contain no opaque pixel separate the props; each run of
+    non-empty columns becomes one sprite (cropped to its own bounding box).
+    """
+    alpha = img.getchannel("A").point(lambda v: 255 if v > alpha_threshold else 0)
+    w, h = alpha.size
+    data = alpha.load()
+    filled = [any(data[x, y] for y in range(h)) for x in range(w)]
+
+    runs: list[tuple[int, int]] = []
+    start: int | None = None
+    gap = 0
+    for x in range(w):
+        if filled[x]:
+            if start is None:
+                start = x
+            gap = 0
+        else:
+            if start is not None:
+                gap += 1
+                if gap >= min_gap:
+                    runs.append((start, x - gap + 1))
+                    start = None
+                    gap = 0
+    if start is not None:
+        runs.append((start, w))
+
+    out: list[Image.Image] = []
+    for x0, x1 in runs:
+        piece = img.crop((x0, 0, x1, h))
+        box = piece.getchannel("A").point(lambda v: 255 if v > alpha_threshold else 0).getbbox()
+        if box:
+            out.append(piece.crop(box))
+    return out
+
+
 def process(raw: str, out: str, height: int, pad_bottom: int) -> None:
     img = align(trim(chroma_key(Image.open(raw))), height, pad_bottom)
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     img.save(out, optimize=True)
     print(f"{raw}  ->  {out}   {img.width}x{img.height}, {os.path.getsize(out)//1024} KB")
+
+
+def process_sheet(raw: str, out_dir: str, prefix: str, height: int, pad_bottom: int) -> None:
+    pieces = split_sheet(chroma_key(Image.open(raw)))
+    if not pieces:
+        raise SystemExit(f"no props found in {raw} -- is the background flat chroma green?")
+    for i, piece in enumerate(pieces):
+        process_piece(piece, str(Path(out_dir) / f"{prefix}_{i}.png"), height, pad_bottom)
+
+
+def process_piece(piece: Image.Image, out: str, height: int, pad_bottom: int) -> None:
+    img = align(trim(piece), height, pad_bottom)
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    img.save(out, optimize=True)
+    print(f"  ->  {out}   {img.width}x{img.height}, {os.path.getsize(out)//1024} KB")
 
 
 def main() -> int:
@@ -90,8 +143,14 @@ def main() -> int:
     ap.add_argument("--height", type=int, default=512, help="target sprite height in px (default 512)")
     ap.add_argument("--pad-bottom", type=int, default=0, help="transparent px under the feet")
     ap.add_argument("--batch", nargs="+", help="glob(s) of raw PNGs")
-    ap.add_argument("--out-dir", default="assets/sprites", help="output dir for --batch")
+    ap.add_argument("--out-dir", default="assets/sprites", help="output dir for --batch/--sheet")
+    ap.add_argument("--sheet", metavar="RAW", help="one row of props on chroma green -> many sprites")
+    ap.add_argument("--prefix", default="prop", help="file-name prefix for --sheet output")
     a = ap.parse_args()
+
+    if a.sheet:
+        process_sheet(a.sheet, a.out_dir, a.prefix, a.height, a.pad_bottom)
+        return 0
 
     if a.batch:
         files: list[str] = []
@@ -105,7 +164,7 @@ def main() -> int:
         return 0
 
     if not a.raw or not a.out:
-        return print("usage: slice_sprites.py RAW OUT [--height N]   (or --batch)") or 2
+        return print("usage: slice_sprites.py RAW OUT [--height N]   (or --batch/--sheet)") or 2
     process(a.raw, a.out, a.height, a.pad_bottom)
     return 0
 

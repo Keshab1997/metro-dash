@@ -32,7 +32,10 @@ import 'run_state.dart';
 /// The whole game: one ticker, one world, one screen. Owned by the captain
 /// (docs/TECH_ARCHITECTURE.md §2).
 class MetroDashGame extends StatefulWidget {
-  const MetroDashGame({super.key});
+  const MetroDashGame({super.key, this.preloadedAssets});
+
+  /// Already-decoded sprites; when null the game loads them itself.
+  final GameAssets? preloadedAssets;
 
   @override
   State<MetroDashGame> createState() => _MetroDashGameState();
@@ -81,12 +84,15 @@ class _MetroDashGameState extends State<MetroDashGame>
   }
 
   Future<void> _boot() async {
+    final preloaded = widget.preloadedAssets;
+    if (preloaded != null) _assets = preloaded;
     await _save.load();
     if (!mounted) return;
     setState(() {
       _strings = Strings(_save.lang);
       _scoring.best = _save.best;
     });
+    if (preloaded != null) return;
     final assets = await GameAssets.load();
     if (!mounted || assets == null) return;
     setState(() => _assets = assets);
@@ -181,7 +187,7 @@ class _MetroDashGameState extends State<MetroDashGame>
 
     _camera.follow(runnerX: _runner.x, runnerZ: _runner.z, dt: dt);
     _camera.updateDip(dt);
-    _environment.update(_runner.z);
+    _environment.update(_runner.z, assets: _assets);
     _particles.update(dt);
     _shake = (_shake - dt * 2.4).clamp(0.0, 1.0);
     _flash = (_flash - dt * 2.6).clamp(0.0, 1.0);

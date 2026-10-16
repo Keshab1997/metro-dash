@@ -140,8 +140,22 @@ World-এর প্রতিটা tile **`farZ`-এ fade** হবে — তা
 | Asset group | Owner | Status | Date |
 |---|---|---|---|
 | key-art, character-ref | Captain | ✅ done | 2026-10-17 |
-| runner set | B | ⬜ Batch 1 | — |
-| world set | A | ⬜ Batch 1 | — |
-| obstacles/coins | C | ⬜ Batch 1 | — |
-| UI + fonts | Captain | ⬜ Batch 1 | — |
+| runner run ×2 + air pose | Captain | ✅ in game | 2026-10-17 |
+| city skyline backdrop | Captain | ✅ in game | 2026-10-17 |
+| ballast gravel texture | Captain | ✅ in game | 2026-10-17 |
+| barrier gate / banner / train / cones | Captain | ✅ in game | 2026-10-17 |
+| coin | Captain | ✅ in game | 2026-10-17 |
+| house row ×3 (cream, teal+tank, corner shop) | Captain | ✅ in game | 2026-10-17 |
+| run frames ×4–6 (full cycle) | B | ⬜ Batch 1 | — |
+| street props sheet (carts, stalls, signal) | A | ⬜ Batch 1 | — |
+| dust / crash burst / powerup icons | C | ⬜ Batch 1 | — |
+| UI kit + fonts | Captain | ⬜ Batch 1 | — |
 | audio | Captain | ⬜ Batch 2 | — |
+
+Raw sheets, script output and the proof sheets used to check every sprite are in
+`docs/art/`. The sprite slicer/aligner is `tool/slice_sprites.py`:
+
+```bash
+python3 tool/slice_sprites.py RAW.png assets/sprites/name.png --height 420
+python3 tool/slice_sprites.py --sheet docs/art/sheet-x-raw.png --prefix prop --height 380
+```

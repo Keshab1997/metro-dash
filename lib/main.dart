@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 
+import 'core/assets.dart';
 import 'core/palette.dart';
 import 'game/metro_dash_game.dart';
 
 void main() => runApp(const MetroDashApp());
 
 class MetroDashApp extends StatelessWidget {
-  const MetroDashApp({super.key});
+  const MetroDashApp({super.key, this.preloadedAssets});
+
+  /// Sprites passed in by a caller that already decoded them (tests, or a warm
+  /// start). Null means "load them in the background", which is what the app
+  /// does in production.
+  final GameAssets? preloadedAssets;
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +24,7 @@ class MetroDashApp extends StatelessWidget {
         scaffoldBackgroundColor: Pal.ink,
         fontFamily: 'Rubik',
       ),
-      home: const MetroDashGame(),
+      home: MetroDashGame(preloadedAssets: preloadedAssets),
     );
   }
 }

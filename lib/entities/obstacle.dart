@@ -22,16 +22,16 @@ class Obstacle {
   bool passed = false;
 
   double get height => switch (kind) {
-        ObstacleKind.barrierLow => 0.95,
+        ObstacleKind.barrierLow => 0.42,
         ObstacleKind.barrierHigh => 2.70,
-        ObstacleKind.train => 2.55,
-        ObstacleKind.cones => 0.55,
+        ObstacleKind.train => 1.85,
+        ObstacleKind.cones => 0.62,
       };
 
   /// Gap under a hanging banner — a rolling hero fits through it.
-  double get gapUnder => kind == ObstacleKind.barrierHigh ? 0.95 : 0;
+  double get gapUnder => kind == ObstacleKind.barrierHigh ? 1.55 : 0;
 
-  double get length => kind == ObstacleKind.train ? 9.5 : 0.85;
+  double get length => kind == ObstacleKind.train ? 4.0 : 0.85;
 
   /// The kind's flavour of danger, kept here so the collision rules and the
   /// painter never disagree about geometry.
