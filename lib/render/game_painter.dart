@@ -73,6 +73,7 @@ class GamePainter extends CustomPainter {
     view.skyline.paint(canvas, size, p, view.assets);
     view.track.paint(canvas, size, p, view.assets);
     view.environment.paint(canvas, p, view.time, view.assets);
+    _paintDistanceHaze(canvas, size, p);
     _paintObstacles(canvas, p);
     _paintCoins(canvas, p);
     _paintRunner(canvas, p);
@@ -89,6 +90,28 @@ class GamePainter extends CustomPainter {
               Pal.paper.withValues(alpha: (view.flash * 0.45).clamp(0.0, 0.45)),
       );
     }
+  }
+
+  /// Air between the camera and the horizon: without it the far end of the
+  /// track stops in a hard line instead of dissolving into the afternoon.
+  void _paintDistanceHaze(Canvas canvas, Size size, Projection p) {
+    final h = size.height;
+    final top = p.horizonY - h * 0.015;
+    final bottom = p.horizonY + h * 0.055;
+    canvas.drawRect(
+      Rect.fromLTRB(0, top, size.width, bottom),
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Pal.haze.withValues(alpha: 0.55),
+            Pal.haze.withValues(alpha: 0.30),
+            Pal.haze.withValues(alpha: 0.0),
+          ],
+          stops: const <double>[0.0, 0.55, 1.0],
+        ).createShader(Rect.fromLTRB(0, top, size.width, bottom)),
+    );
   }
 
   // ---- obstacles -----------------------------------------------------------

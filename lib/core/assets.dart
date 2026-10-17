@@ -16,6 +16,8 @@ class GameAssets {
 
   static const skylineKey = 'skyline';
   static const ballastKey = 'ballast';
+  static const grassKey = 'grass';
+  static const concreteKey = 'concrete';
   static const coinKey = 'coin';
 
   /// Runner animation frames, in order.
@@ -28,6 +30,8 @@ class GameAssets {
   static const Map<String, String> files = <String, String>{
     skylineKey: 'assets/sprites/bg_skyline.jpg',
     ballastKey: 'assets/sprites/texture_ballast.jpg',
+    grassKey: 'assets/sprites/texture_grass.jpg',
+    concreteKey: 'assets/sprites/texture_concrete.jpg',
     'runner_run_0': 'assets/sprites/runner_run_0.png',
     'runner_run_1': 'assets/sprites/runner_run_1.png',
     'runner_air': 'assets/sprites/runner_air.png',
