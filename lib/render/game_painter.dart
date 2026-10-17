@@ -72,8 +72,11 @@ class GamePainter extends CustomPainter {
 
     view.skyline.paint(canvas, size, p, view.assets);
     view.track.paint(canvas, size, p, view.assets);
-    view.environment.paint(canvas, p, view.time, view.assets);
+    // The haze dissolves the far end of the ground -- so it has to go on
+    // before the city, or it paints a white band straight across the
+    // buildings and their lamp posts.
     _paintDistanceHaze(canvas, size, p);
+    view.environment.paint(canvas, p, view.time, view.assets);
     _paintObstacles(canvas, p);
     _paintCoins(canvas, p);
     _paintRunner(canvas, p);
@@ -96,8 +99,8 @@ class GamePainter extends CustomPainter {
   /// track stops in a hard line instead of dissolving into the afternoon.
   void _paintDistanceHaze(Canvas canvas, Size size, Projection p) {
     final h = size.height;
-    final top = p.horizonY - h * 0.015;
-    final bottom = p.horizonY + h * 0.055;
+    final top = p.horizonY - h * 0.012;
+    final bottom = p.horizonY + h * 0.045;
     canvas.drawRect(
       Rect.fromLTRB(0, top, size.width, bottom),
       Paint()
@@ -105,8 +108,8 @@ class GamePainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: <Color>[
-            Pal.haze.withValues(alpha: 0.55),
-            Pal.haze.withValues(alpha: 0.30),
+            Pal.haze.withValues(alpha: 0.26),
+            Pal.haze.withValues(alpha: 0.13),
             Pal.haze.withValues(alpha: 0.0),
           ],
           stops: const <double>[0.0, 0.55, 1.0],
@@ -321,25 +324,34 @@ class GamePainter extends CustomPainter {
         canvas.drawCircle(
           pos.screen,
           r * 1.5,
-          paint..color = Pal.coin.withValues(alpha: 0.18 * fade),
+          paint..color = Pal.coin.withValues(alpha: 0.10 * fade),
         );
-        // Face and edge poses alternate with a per-coin phase, so a line of
-        // coins shimmers instead of blinking in lockstep.
-        final phase = math.sin(view.time * 5.2 + c.z * 1.7);
-        final faceUp = phase > -0.25;
-        final pose =
-            faceUp ? coinSprite : (view.assets?.coinSpin ?? coinSprite);
-        final h = r * 2.05 * (faceUp ? 1.0 : 0.95);
-        final w = h * pose.width / pose.height;
+        // A real spin: the disc turns on its vertical axis, squeezing to a
+        // sliver and back and mirroring for the back of the turn. Two sprites
+        // that both render face-on cannot do that -- a coin line just read as
+        // one gold caterpillar.
+        final phase = view.time * 5.6 + c.z * 1.35;
+        final turn = math.cos(phase);
+        final squeeze = 0.16 + 0.84 * turn.abs();
+        final h = r * 1.72;
+        final w = h * coinSprite.width / coinSprite.height * squeeze;
+        canvas.save();
+        if (turn < 0) {
+          // mirror about the coin's own centre: shows its back for half a turn
+          canvas.translate(pos.screen.dx * 2, 0);
+          canvas.scale(-1, 1);
+        }
         canvas.drawImageRect(
-          pose,
-          Rect.fromLTWH(0, 0, pose.width.toDouble(), pose.height.toDouble()),
+          coinSprite,
+          Rect.fromLTWH(
+              0, 0, coinSprite.width.toDouble(), coinSprite.height.toDouble()),
           Rect.fromCenter(center: pos.screen, width: w, height: h),
           fade >= 0.99
               ? Paint()
               : (Paint()
                 ..color = Color.fromARGB((255 * fade).round(), 255, 255, 255)),
         );
+        canvas.restore();
         continue;
       }
 
@@ -370,8 +382,8 @@ class GamePainter extends CustomPainter {
     canvas.drawOval(
       Rect.fromCenter(
         center: ground.screen,
-        width: 0.95 * ground.scale * shrink,
-        height: 0.3 * ground.scale * shrink,
+        width: 0.58 * ground.scale * shrink,
+        height: 0.19 * ground.scale * shrink,
       ),
       Paint()..color = const Color(0x4D0D2420),
     );

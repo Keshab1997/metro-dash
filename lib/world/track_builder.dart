@@ -95,17 +95,39 @@ class TrackBuilder {
     final sleeperEnd = math.min(far, p.camZ + Tune.sleeperReach);
     final spacing = Tune.sleeperSpacing;
     final firstIndex = (sleeperEnd / spacing).floor();
+    final sleeperTex = assets?.sprite(GameAssets.sleeperKey);
+    final half = Tune.trackHalf - 0.03;
     for (var i = firstIndex; i > 0; i--) {
       final z = i * spacing;
       if (z < near) continue;
       // a deterministic per-sleeper shade: worn wood, not a printed pattern
       final jitter = (math.sin(i * 12.9898) * 43758.5453).frac();
       final base = Color.lerp(_sleeperBase, _sleeperLight, jitter * 0.65)!;
-      final half = Tune.trackHalf - 0.03;
-      // body
-      _fill(canvas, p, -half, half, 0.05, z, z + 0.34, base);
+      // Timber grain on everything close enough to show it; the far ones are
+      // a few pixels tall and a flat fill is indistinguishable there.
+      if (sleeperTex != null && z - p.camZ < 26) {
+        TexturedSurface.groundBand(
+          canvas,
+          p,
+          sleeperTex,
+          x0: -half,
+          x1: half,
+          y: 0.05,
+          pxPerUnit: 78,
+          nearDz: math.max(0.35, z - p.camZ),
+          farDz: z - p.camZ + 0.34,
+          tint: Color.lerp(const Color(0xFFFFFFFF), base, 0.42)!,
+        );
+        // the tile is a close-up of dark wood; sunlight brings it up to the
+        // weathered mid-brown a sleeper actually reads as
+        _fill(canvas, p, -half, half, 0.051, z, z + 0.34,
+            const Color(0x2EE0C9A6));
+      } else {
+        _fill(canvas, p, -half, half, 0.05, z, z + 0.34, base);
+      }
       // front bevel catches the sun, the back edge falls into shadow
-      _fill(canvas, p, -half, half, 0.052, z, z + 0.07, _sleeperLight);
+      _fill(canvas, p, -half, half, 0.052, z, z + 0.07,
+          base.withValues(alpha: 0.55));
       _fill(canvas, p, -half, half, 0.052, z + 0.26, z + 0.34, _sleeperDark);
     }
 
@@ -165,8 +187,6 @@ class TrackBuilder {
     }
 
     // ---- track-side furniture ---------------------------------------------
-    _trackSideProps(canvas, p, assets);
-
     // ---- parapet + coping --------------------------------------------------
     final wallFar = p.camZ + Tune.viewFar;
     for (final side in const <double>[-1, 1]) {
@@ -196,6 +216,10 @@ class TrackBuilder {
       );
       _fill(canvas, p, x - 0.16, x + 0.05, 0.645, near, wallFar, Pal.paper);
     }
+
+    // Furniture goes on last so it stands in front of the wall, the way real
+    // line-side gear does, instead of hiding behind the buildings.
+    _trackSideProps(canvas, p, assets);
   }
 
   /// The inner face of a rail, lit from above and lost in shadow underneath.
@@ -229,25 +253,38 @@ class TrackBuilder {
   void _trackSideProps(Canvas canvas, Projection p, GameAssets? assets) {
     final signal = assets?.sprite('prop_signal');
     final catenary = assets?.sprite('prop_catenary');
-    final marker = assets?.sprite('prop_marker');
-    if (signal == null && catenary == null && marker == null) return;
+    if (signal == null && catenary == null) return;
 
     const signalSpacing = 62.0;
-    const catenarySpacing = 26.0;
-    const markerSpacing = 18.0;
-    final startDz = 4.0;
-    final farDz = Tune.viewFar;
+    const startDz = 4.0;
+    // Everything beyond this is a handful of pixels tall and simply piles up
+    // on the vanishing point -- a stack of pale masts read as one white line
+    // straight down the middle of the screen. Cut them before they get there.
+    const reach = 30.0;
+    final farDz = math.min(Tune.viewFar, reach);
+
+    /// 1 near the camera, 0 at the cut-off — squared so the last masts vanish
+    /// instead of popping.
+    /// Solid all the way out, then a short fade -- distance haze in the last
+    /// few metres, not a fade that quietly erases the poles 10 m away.
+    double vis(double dz) => ((reach - dz) / 8).clamp(0.0, 1.0);
+
+    Rect destRect(ui.Image sprite, double x, double z, double worldH) {
+      final base = p.project(x, 0, z);
+      final h = worldH * base.scale;
+      final w = h * sprite.width / sprite.height;
+      return Rect.fromLTWH(base.screen.dx - w / 2, base.screen.dy - h, w, h);
+    }
 
     void draw(
         ui.Image sprite, double x, double z, double worldH, double alpha) {
       if (alpha <= 0.03) return;
-      final base = p.project(x, 0, z);
-      final h = worldH * base.scale;
-      final w = h * sprite.width / sprite.height;
+      final rect = destRect(sprite, x, z, worldH);
+      if (rect.width < 1.2) return;
       canvas.drawImageRect(
         sprite,
         Rect.fromLTWH(0, 0, sprite.width.toDouble(), sprite.height.toDouble()),
-        Rect.fromLTWH(base.screen.dx - w / 2, base.screen.dy - h, w, h),
+        rect,
         alpha >= 0.99
             ? Paint()
             : (Paint()
@@ -255,26 +292,54 @@ class TrackBuilder {
       );
     }
 
+    // ---- overhead line masts with their catenary wires ----------------------
+    const mastH = 4.0;
+    const mastX = Tune.trackHalf + 0.30;
     if (catenary != null) {
-      for (var dz = startDz; dz < farDz; dz += catenarySpacing) {
-        final z = p.camZ + dz;
-        draw(catenary, -(Tune.trackHalf + 0.75), z, 5.6, p.fadeAt(z) * 0.95);
-        draw(catenary, (Tune.trackHalf + 0.75), z + catenarySpacing / 2, 5.6,
-            p.fadeAt(z) * 0.95);
+      const spacing = 13.0;
+      for (final side in const <double>[-1, 1]) {
+        final x = side * mastX;
+        final tops = <Offset>[];
+        // offset the two sides so the street does not look mirrored
+        final phase = side < 0 ? 0.0 : spacing / 2;
+        for (var dz = startDz + phase; dz < farDz; dz += spacing) {
+          final z = p.camZ + dz;
+          draw(catenary, x, z, mastH, vis(dz) * 0.95);
+          tops.add(p.project(x, mastH * 0.93, z).screen);
+        }
+        // the wire itself: what actually makes them read as electric poles
+        if (tops.length > 1) {
+          final wire = Path()..moveTo(tops.first.dx, tops.first.dy);
+          for (var i = 1; i < tops.length; i++) {
+            final a = tops[i - 1];
+            final b = tops[i];
+            final sag = (b.dy - a.dy).abs() * 0.18 + 1.2;
+            wire.quadraticBezierTo(
+              (a.dx + b.dx) / 2,
+              (a.dy + b.dy) / 2 + sag,
+              b.dx,
+              b.dy,
+            );
+          }
+          canvas.drawPath(
+            wire,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.1
+              ..color = const Color(0xFF4A4A4A).withValues(alpha: 0.55),
+          );
+        }
       }
     }
+
+    // ---- signals: right-hand side, well apart --------------------------------
     if (signal != null) {
       for (var dz = startDz + 18; dz < farDz; dz += signalSpacing) {
-        final z = p.camZ + dz;
-        draw(signal, (Tune.trackHalf + 0.5), z, 3.4, p.fadeAt(z));
+        draw(signal, Tune.trackHalf + 0.26, p.camZ + dz, 2.9, vis(dz));
       }
     }
-    if (marker != null) {
-      for (var dz = startDz + 6; dz < farDz * 0.6; dz += markerSpacing) {
-        final z = p.camZ + dz;
-        draw(marker, -(Tune.trackHalf + 0.42), z, 0.8, p.fadeAt(z));
-      }
-    }
+    // The kilometre stones were dropped: at game scale they read as grey
+    // tombstones floating beside the ballast.
   }
 
   void _fill(

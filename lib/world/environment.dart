@@ -163,18 +163,9 @@ class Environment {
       );
     }
 
-    // a lit window is the cheapest way to make a house read as "alive"
-    if (b.lit && (b.z - p.camZ) < 30) {
-      canvas.drawRect(
-        Rect.fromLTWH(
-          rect.left + rect.width * 0.18,
-          rect.top + rect.height * 0.30,
-          rect.width * 0.22,
-          rect.height * 0.14,
-        ),
-        Paint()..color = Pal.coin.withValues(alpha: 0.55 * fade),
-      );
-    }
+    // The painted "lit window" that used to sit here is gone: the generated
+    // houses already have real windows, and the flat gold rectangle scaled up
+    // with the building until it was a yellow slab across the facade.
   }
 
   /// Street-scale props (tea cart, stall) sitting just outside the parapet.
@@ -206,14 +197,14 @@ class Environment {
   }
 
   void _paintLights(Canvas canvas, Projection p, double time) {
-    const poleX = Tune.trackHalf + 0.55;
+    const poleX = Tune.trackHalf + 1.05;
     const spacing = 7.0;
     final start = ((p.camZ + 1) / spacing).ceil() * spacing;
-    for (double z = start; z < p.camZ + 30; z += spacing) {
+    for (double z = start; z < p.camZ + 26; z += spacing) {
       for (final side in const <double>[-1, 1]) {
         final x = side * poleX;
         final base = p.project(x, 0, z);
-        final top = p.project(x, 3.7, z);
+        final top = p.project(x, 3.3, z);
         final fade = p.fadeAt(z);
         canvas.drawLine(
           base.screen,
@@ -223,9 +214,9 @@ class Environment {
             ..strokeWidth = math.max(1.0, 0.055 * base.scale),
         );
         // the wire to the next pole, sagging
-        if (z + spacing < p.camZ + 30) {
-          final nextTop = p.project(x, 3.7, z + spacing);
-          final mid = p.project(x, 3.25, z + spacing / 2);
+        if (z + spacing < p.camZ + 26) {
+          final nextTop = p.project(x, 3.3, z + spacing);
+          final mid = p.project(x, 2.9, z + spacing / 2);
           canvas.drawPath(
             Path()
               ..moveTo(top.screen.dx, top.screen.dy)

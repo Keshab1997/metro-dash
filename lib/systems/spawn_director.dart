@@ -89,7 +89,7 @@ class SpawnDirector {
     for (var i = 0; i < count; i++) {
       final t = count == 1 ? 0.0 : i / (count - 1);
       final y = arch ? 0.65 + math.sin(t * math.pi) * 1.15 : 0.8;
-      coins.add(Coin(lane: lane, z: z + i * 1.15, y: y));
+      coins.add(Coin(lane: lane, z: z + i * 1.55, y: y));
     }
   }
 }

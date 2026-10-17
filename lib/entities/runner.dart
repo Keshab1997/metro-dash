@@ -114,7 +114,9 @@ class Runner {
     }
 
     squash += (1 - squash) * math.min(1, dt * 9);
-    stride += dt * (speed * 0.42);
+    // ~2 cycles a second at cruising speed. The old factor gave 7 a second,
+    // which flickered through the cycle so fast the legs read as flapping.
+    stride += dt * (1.05 + speed * 0.055);
   }
 
   void die() => alive = false;
