@@ -13,6 +13,7 @@
 | **[ASSET_PIPELINE.md](ASSET_PIPELINE.md)** | asset কোথা থেকে — AI prompt, sprite spec, post-process, audio list, registration table |
 | **[ROADMAP_BATCHES.md](ROADMAP_BATCHES.md)** | কোন ক্রমে — Batch 0 (reboot) → Batch 1 (A∥B∥C) → polish → RC |
 | **[ART_DIRECTION.md](ART_DIRECTION.md)** | দেখতে কেমন — palette hex, lighting, motif, motion principles |
+| **[ASSET_REQUESTS.md](ASSET_REQUESTS.md)** | কোন asset কোথায় দরকার, কোনটা হয়ে গেছে, কে বানাবে (HIGH/MED/LOW) |
 | **[art/key-art.png](art/key-art.png)**, **[art/character-ref.png](art/character-ref.png)** | style lock করা reference ছবি (AI-generated, original) |
 
 ## এক নজরে সিদ্ধান্ত
