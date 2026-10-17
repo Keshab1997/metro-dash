@@ -30,10 +30,23 @@ class Popup {
   double t = 0;
 }
 
-/// Dust, sparks and floating score numbers — the cheap half of "feel".
+/// One impact burst: a sprite that pops, expands and fades at a world point.
+class Burst {
+  Burst(this.x, this.y, this.z);
+
+  final double x;
+  final double y;
+  final double z;
+  double t = 0;
+  static const double life = 0.55;
+}
+
+/// Dust, sparks, impact bursts and floating score numbers — the cheap half of
+/// "feel".
 class Particles {
   final List<Puff> puffs = <Puff>[];
   final List<Popup> popups = <Popup>[];
+  final List<Burst> bursts = <Burst>[];
 
   final math.Random _rnd = math.Random(99);
 
@@ -73,9 +86,13 @@ class Particles {
   void popup(String text, double x, double y, double z) =>
       popups.add(Popup(text, x, y, z));
 
+  /// A generated crash burst at the point of impact.
+  void burst(double x, double y, double z) => bursts.add(Burst(x, y, z));
+
   void clear() {
     puffs.clear();
     popups.clear();
+    bursts.clear();
   }
 
   void update(double dt) {
@@ -89,10 +106,37 @@ class Particles {
       p.y += dt * 1.1;
     }
     popups.removeWhere((p) => p.t >= p.life);
+    for (final b in bursts) {
+      b.t += dt;
+    }
+    bursts.removeWhere((b) => b.t >= Burst.life);
   }
 
   void paint(Canvas canvas, Projection p, Size size, GameAssets? assets) {
     final dust = assets?.dust;
+    final crash = assets?.crash;
+    if (crash != null) {
+      for (final b in bursts) {
+        final dz = b.z - p.camZ;
+        if (dz < p.nearZ || dz > p.camZ + 30) continue;
+        final pos = p.project(b.x, b.y, b.z);
+        final k = (b.t / Burst.life).clamp(0.0, 1.0);
+        // pop out fast, then fade: the classic impact curve
+        final grow = 0.55 + 0.9 * math.sqrt(k);
+        final h = 1.9 * pos.scale * grow;
+        final w = h * crash.width / crash.height;
+        canvas.drawImageRect(
+          crash,
+          Rect.fromLTWH(0, 0, crash.width.toDouble(), crash.height.toDouble()),
+          Rect.fromCenter(center: pos.screen, width: w, height: h),
+          Paint()
+            ..colorFilter = ColorFilter.mode(
+              Color.fromARGB(((1 - k) * 255).round(), 255, 255, 255),
+              BlendMode.modulate,
+            ),
+        );
+      }
+    }
     final sorted = List<Puff>.from(puffs)..sort((a, b) => b.z.compareTo(a.z));
     for (final puff in sorted) {
       final dz = puff.z - p.camZ;

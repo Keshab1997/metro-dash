@@ -201,6 +201,7 @@ class _MetroDashGameState extends State<MetroDashGame>
     _deathT = 0.8;
     _deathScale = 0.5;
     _camera.bump(0.4);
+    _particles.burst(_runner.x, 0.85, _runner.z + 0.4);
     _particles.dust(_runner.x, 0.5, _runner.z, n: 16, spread: 0.9, size: 0.3);
   }
 

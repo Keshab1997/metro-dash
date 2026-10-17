@@ -156,7 +156,9 @@ class GamePainter extends CustomPainter {
     p0 = p;
 
     final sprite = view.assets?.sprite(switch (o.kind) {
-      ObstacleKind.barrierLow => 'barrier_low',
+      // alternate the two generated gate variants so a level crossing never
+      // looks copy-pasted
+      ObstacleKind.barrierLow => o.id.isEven ? 'barrier_low' : 'barrier_low_2',
       ObstacleKind.barrierHigh => 'barrier_high',
       ObstacleKind.train => 'train',
       ObstacleKind.cones => 'cones',
@@ -321,12 +323,17 @@ class GamePainter extends CustomPainter {
           r * 1.5,
           paint..color = Pal.coin.withValues(alpha: 0.18 * fade),
         );
-        final h = r * 2.05;
-        final w = h * coinSprite.width / coinSprite.height;
+        // Face and edge poses alternate with a per-coin phase, so a line of
+        // coins shimmers instead of blinking in lockstep.
+        final phase = math.sin(view.time * 5.2 + c.z * 1.7);
+        final faceUp = phase > -0.25;
+        final pose =
+            faceUp ? coinSprite : (view.assets?.coinSpin ?? coinSprite);
+        final h = r * 2.05 * (faceUp ? 1.0 : 0.95);
+        final w = h * pose.width / pose.height;
         canvas.drawImageRect(
-          coinSprite,
-          Rect.fromLTWH(
-              0, 0, coinSprite.width.toDouble(), coinSprite.height.toDouble()),
+          pose,
+          Rect.fromLTWH(0, 0, pose.width.toDouble(), pose.height.toDouble()),
           Rect.fromCenter(center: pos.screen, width: w, height: h),
           fade >= 0.99
               ? Paint()
@@ -387,13 +394,17 @@ class GamePainter extends CustomPainter {
     canvas.scale(1 + (1 - squash) * 0.5, squash);
 
     final assets = view.assets;
+    final dying = !r.alive && assets?.hitFrame != null;
     final ui.Image? image = assets == null
         ? null
-        : r.isAirborne
-            ? assets.airFrame
-            : r.isRolling
-                ? (assets.rollFrame ?? assets.airFrame)
-                : assets.runFrames[r.runFrameIndexFor(assets.runFrames.length)];
+        : dying
+            ? assets.hitFrame
+            : r.isAirborne
+                ? assets.airFrame
+                : r.isRolling
+                    ? (assets.rollFrame ?? assets.airFrame)
+                    : assets
+                        .runFrames[r.runFrameIndexFor(assets.runFrames.length)];
 
     if (image != null) {
       final h = Tune.runnerHeight * feet.scale * (r.isRolling ? 0.8 : 1.03);
@@ -431,6 +442,37 @@ class GamePainter extends CustomPainter {
 
   // ---- speed streaks -------------------------------------------------------
   void _paintSpeedStreaks(Canvas canvas, Size size) {
+    final streak = view.assets?.sprite('speed_streak');
+    final intensity0 =
+        ((view.speed - 17) / (Tune.speedCap - 17)).clamp(0.0, 1.0);
+    if (streak != null && intensity0 > 0) {
+      final t0 = view.time * 3.4;
+      for (var i = 0; i < 8; i++) {
+        final edge = i.isEven;
+        final k = ((i * 0.37 + t0) % 1.0);
+        final y = size.height * (0.55 + k * 0.42);
+        final w = size.width * (0.16 + 0.20 * intensity0) * (0.6 + k * 0.6);
+        final h = w * streak.height / streak.width;
+        final x = edge ? -w * 0.15 : size.width - w * 0.85;
+        canvas.drawImageRect(
+          streak,
+          Rect.fromLTWH(
+              0, 0, streak.width.toDouble(), streak.height.toDouble()),
+          Rect.fromLTWH(x, y, w, h),
+          Paint()
+            ..colorFilter = ColorFilter.mode(
+              Color.fromARGB(
+                (210 * intensity0 * (0.35 + k * 0.65)).round(),
+                255,
+                255,
+                255,
+              ),
+              BlendMode.modulate,
+            ),
+        );
+      }
+      return;
+    }
     final intensity =
         ((view.speed - 17) / (Tune.speedCap - 17)).clamp(0.0, 1.0);
     if (intensity <= 0) return;

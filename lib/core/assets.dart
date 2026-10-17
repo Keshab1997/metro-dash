@@ -22,6 +22,8 @@ class GameAssets {
   static const railHeadKey = 'rail_head';
   static const dustKey = 'dust';
   static const rollKey = 'roll';
+  static const crashKey = 'crash';
+  static const coinSpinKey = 'coin_spin';
   static const coinKey = 'coin';
 
   /// Runner animation frames, in order.
@@ -48,6 +50,13 @@ class GameAssets {
     'runner_run_3': 'assets/sprites/runner_run_3.png',
     'runner_roll': 'assets/sprites/runner_roll.png',
     'dust': 'assets/sprites/dust.png',
+    'coin_spin': 'assets/sprites/coin_spin.png',
+    'crash': 'assets/sprites/crash.png',
+    'speed_streak': 'assets/sprites/speed_streak.png',
+    'runner_hit': 'assets/sprites/runner_hit.png',
+    'barrier_low_2': 'assets/sprites/barrier_low_2.png',
+    'prop_cart': 'assets/sprites/prop_cart.png',
+    'prop_stall': 'assets/sprites/prop_stall.png',
     'barrier_low': 'assets/sprites/barrier_low.png',
     'barrier_high': 'assets/sprites/barrier_high.png',
     'train': 'assets/sprites/train.png',
@@ -56,6 +65,9 @@ class GameAssets {
     'house_0': 'assets/sprites/house_0.png',
     'house_1': 'assets/sprites/house_1.png',
     'house_2': 'assets/sprites/house_2.png',
+    'house_4': 'assets/sprites/house_4.png',
+    'house_5': 'assets/sprites/house_5.png',
+    'house_6': 'assets/sprites/house_6.png',
   };
 
   ui.Image? sprite(String key) => _sprites[key];
@@ -68,6 +80,12 @@ class GameAssets {
   ui.Image? get rollFrame => _sprites['runner_roll'];
 
   ui.Image? get dust => _sprites['dust'];
+
+  ui.Image? get crash => _sprites[crashKey];
+
+  ui.Image? get hitFrame => _sprites['runner_hit'];
+
+  ui.Image? get coinSpin => _sprites[coinSpinKey];
   List<ui.Image> get runFrames =>
       runFrameKeys.map((k) => _sprites[k]).whereType<ui.Image>().toList();
 
@@ -75,8 +93,14 @@ class GameAssets {
   static const List<String> houseKeys = <String>[
     'house_0',
     'house_1',
-    'house_2'
+    'house_2',
+    'house_4',
+    'house_5',
+    'house_6',
   ];
+
+  /// Street-level props that sit between the houses.
+  static const List<String> propKeys = <String>['prop_cart', 'prop_stall'];
 
   static Future<ui.Image?> _decode(AssetBundle bundle, String path) async {
     try {

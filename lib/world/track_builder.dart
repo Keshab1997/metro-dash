@@ -23,9 +23,9 @@ class TrackBuilder {
 
   static const Color _railHead = Color(0xFF8A949B);
   static const Color _railShine = Color(0xFFE8F1F4);
-  static const Color _sleeperBase = Color(0xFF7A6650);
-  static const Color _sleeperLight = Color(0xFF97806A);
-  static const Color _sleeperDark = Color(0xFF5C4C3B);
+  static const Color _sleeperBase = Color(0xFF8A7157);
+  static const Color _sleeperLight = Color(0xFFB0946F);
+  static const Color _sleeperDark = Color(0xFF6B5844);
 
   void paint(Canvas canvas, Size size, Projection p, GameAssets? assets) {
     final near = p.nearZ;
@@ -146,7 +146,7 @@ class TrackBuilder {
             x0: x - _railHalfWidth * 1.25,
             x1: x + _railHalfWidth * 1.25,
             y: _headTop + 0.002,
-            pxPerUnit: 900,
+            pxPerUnit: 260,
             tint: const Color(0xFFF6FBFF),
           );
         } else {

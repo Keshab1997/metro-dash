@@ -7,6 +7,19 @@ import '../core/config.dart';
 import '../core/palette.dart';
 import '../game/projection.dart';
 
+class _Prop {
+  _Prop(
+      {required this.side,
+      required this.z,
+      required this.sprite,
+      required this.height});
+
+  final double side; // -1 left, +1 right
+  final double z;
+  final String sprite;
+  final double height;
+}
+
 class _Building {
   _Building({
     required this.height,
@@ -31,6 +44,7 @@ class Environment {
   final math.Random _rnd;
   final List<_Building> _left = <_Building>[];
   final List<_Building> _right = <_Building>[];
+  final List<_Prop> _props = <_Prop>[];
   double _frontier = 6;
 
   /// House sprites are drawn from their base centre. The wall line sits just
@@ -42,6 +56,7 @@ class Environment {
   void reset() {
     _left.clear();
     _right.clear();
+    _props.clear();
     _frontier = 6;
   }
 
@@ -54,6 +69,7 @@ class Environment {
     final cut = runnerZ - Tune.recycleBehind;
     _left.removeWhere((b) => b.z + 8 < cut);
     _right.removeWhere((b) => b.z + 8 < cut);
+    _props.removeWhere((f) => f.z + 6 < cut);
   }
 
   void _spawnRow(double z, GameAssets? assets) {
@@ -74,6 +90,19 @@ class Environment {
       }
       (side < 0 ? _left : _right).add(b);
     }
+    // a tea cart or a stall now and then, tucked against the parapet
+    if (assets != null && _rnd.nextInt(100) < 55) {
+      final sprite =
+          GameAssets.propKeys[_rnd.nextInt(GameAssets.propKeys.length)];
+      _props.add(
+        _Prop(
+          side: _rnd.nextBool() ? -1 : 1,
+          z: z + 1.2 + _rnd.nextDouble() * 1.6,
+          sprite: sprite,
+          height: sprite == 'prop_cart' ? 1.05 : 1.35,
+        ),
+      );
+    }
   }
 
   void paint(Canvas canvas, Projection p, double time, GameAssets? assets) {
@@ -85,6 +114,7 @@ class Environment {
       final side = _left.contains(b) ? -1.0 : 1.0;
       _paintBuilding(canvas, p, b, side, assets);
     }
+    _paintProps(canvas, p, assets);
     _paintLights(canvas, p, time);
   }
 
@@ -143,6 +173,34 @@ class Environment {
           rect.height * 0.14,
         ),
         Paint()..color = Pal.coin.withValues(alpha: 0.55 * fade),
+      );
+    }
+  }
+
+  /// Street-scale props (tea cart, stall) sitting just outside the parapet.
+  void _paintProps(Canvas canvas, Projection p, GameAssets? assets) {
+    if (assets == null) return;
+    final visible = _props
+        .where((f) => f.z - p.camZ > -2 && f.z - p.camZ < 40)
+        .toList()
+      ..sort((a, b) => b.z.compareTo(a.z));
+    for (final f in visible) {
+      final image = assets.sprite(f.sprite);
+      if (image == null) continue;
+      final fade = p.fadeAt(f.z - 12);
+      if (fade <= 0.03) continue;
+      final x = f.side * 2.55;
+      final base = p.project(x, 0, f.z);
+      final h = f.height * base.scale;
+      final w = h * image.width / image.height;
+      canvas.drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        Rect.fromLTWH(base.screen.dx - w / 2, base.screen.dy - h, w, h),
+        fade >= 0.99
+            ? Paint()
+            : (Paint()
+              ..color = Color.fromARGB((255 * fade).round(), 255, 255, 255)),
       );
     }
   }
