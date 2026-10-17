@@ -36,8 +36,12 @@ class Runner {
   double get rollProgress =>
       isRolling ? (_roll / Tune.rollDuration).clamp(0.0, 1.0) : 0;
 
-  /// Which of the two run frames is showing — alternates with the stride.
-  int get runFrameIndex => (stride * 2).floor().abs() % 2;
+  /// Which run frame is showing. [frameCount] comes from the loaded sprite
+  /// list, so adding frames later needs no change here.
+  int runFrameIndexFor(int frameCount) {
+    if (frameCount <= 1) return 0;
+    return (stride * frameCount).floor().abs() % frameCount;
+  }
 
   void reset() {
     x = 0;

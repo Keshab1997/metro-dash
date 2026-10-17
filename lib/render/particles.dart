@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../core/assets.dart';
 import '../core/palette.dart';
 import '../game/projection.dart';
 
@@ -90,7 +91,8 @@ class Particles {
     popups.removeWhere((p) => p.t >= p.life);
   }
 
-  void paint(Canvas canvas, Projection p, Size size) {
+  void paint(Canvas canvas, Projection p, Size size, GameAssets? assets) {
+    final dust = assets?.dust;
     final sorted = List<Puff>.from(puffs)..sort((a, b) => b.z.compareTo(a.z));
     for (final puff in sorted) {
       final dz = puff.z - p.camZ;
@@ -98,11 +100,29 @@ class Particles {
       final pos = p.project(puff.x, puff.y, puff.z);
       final k = (puff.t / puff.life).clamp(0.0, 1.0);
       final r = puff.size * pos.scale * (0.55 + k * 0.9);
-      canvas.drawCircle(
-        pos.screen,
-        r,
-        Paint()..color = puff.color.withValues(alpha: (1 - k) * 0.75),
-      );
+      if (dust != null) {
+        // The generated dust sprite, faded out over its life and tinted by the
+        // particle colour (sparkle particles stay pure colour discs).
+        final paint = Paint()
+          ..colorFilter = ColorFilter.mode(
+            puff.color.withValues(alpha: (1 - k) * 0.8),
+            BlendMode.modulate,
+          );
+        final h = r * 2.1;
+        final w = h * dust.width / dust.height;
+        canvas.drawImageRect(
+          dust,
+          Rect.fromLTWH(0, 0, dust.width.toDouble(), dust.height.toDouble()),
+          Rect.fromCenter(center: pos.screen, width: w, height: h),
+          paint,
+        );
+      } else {
+        canvas.drawCircle(
+          pos.screen,
+          r,
+          Paint()..color = puff.color.withValues(alpha: (1 - k) * 0.75),
+        );
+      }
     }
   }
 

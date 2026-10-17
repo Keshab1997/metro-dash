@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 import '../core/assets.dart';
@@ -135,18 +137,35 @@ class TrackBuilder {
           far,
           _railHead,
         );
-        _fill(
-          canvas,
-          p,
-          x - 0.012,
-          x + 0.012,
-          _headTop + 0.002,
-          near,
-          far,
-          _railShine,
-        );
+        final headTex = assets?.sprite(GameAssets.railHeadKey);
+        if (headTex != null) {
+          TexturedSurface.groundBand(
+            canvas,
+            p,
+            headTex,
+            x0: x - _railHalfWidth * 1.25,
+            x1: x + _railHalfWidth * 1.25,
+            y: _headTop + 0.002,
+            pxPerUnit: 900,
+            tint: const Color(0xFFF6FBFF),
+          );
+        } else {
+          _fill(
+            canvas,
+            p,
+            x - 0.012,
+            x + 0.012,
+            _headTop + 0.002,
+            near,
+            far,
+            _railShine,
+          );
+        }
       }
     }
+
+    // ---- track-side furniture ---------------------------------------------
+    _trackSideProps(canvas, p, assets);
 
     // ---- parapet + coping --------------------------------------------------
     final wallFar = p.camZ + Tune.viewFar;
@@ -203,6 +222,59 @@ class TrackBuilder {
       _paint,
     );
     _paint.shader = null;
+  }
+
+  /// Signal masts, catenary poles and kilometre markers, spaced down the line.
+  /// They are the cheapest way to make the corridor read as a real railway.
+  void _trackSideProps(Canvas canvas, Projection p, GameAssets? assets) {
+    final signal = assets?.sprite('prop_signal');
+    final catenary = assets?.sprite('prop_catenary');
+    final marker = assets?.sprite('prop_marker');
+    if (signal == null && catenary == null && marker == null) return;
+
+    const signalSpacing = 62.0;
+    const catenarySpacing = 26.0;
+    const markerSpacing = 18.0;
+    final startDz = 4.0;
+    final farDz = Tune.viewFar;
+
+    void draw(
+        ui.Image sprite, double x, double z, double worldH, double alpha) {
+      if (alpha <= 0.03) return;
+      final base = p.project(x, 0, z);
+      final h = worldH * base.scale;
+      final w = h * sprite.width / sprite.height;
+      canvas.drawImageRect(
+        sprite,
+        Rect.fromLTWH(0, 0, sprite.width.toDouble(), sprite.height.toDouble()),
+        Rect.fromLTWH(base.screen.dx - w / 2, base.screen.dy - h, w, h),
+        alpha >= 0.99
+            ? Paint()
+            : (Paint()
+              ..color = Color.fromARGB((255 * alpha).round(), 255, 255, 255)),
+      );
+    }
+
+    if (catenary != null) {
+      for (var dz = startDz; dz < farDz; dz += catenarySpacing) {
+        final z = p.camZ + dz;
+        draw(catenary, -(Tune.trackHalf + 0.75), z, 5.6, p.fadeAt(z) * 0.95);
+        draw(catenary, (Tune.trackHalf + 0.75), z + catenarySpacing / 2, 5.6,
+            p.fadeAt(z) * 0.95);
+      }
+    }
+    if (signal != null) {
+      for (var dz = startDz + 18; dz < farDz; dz += signalSpacing) {
+        final z = p.camZ + dz;
+        draw(signal, (Tune.trackHalf + 0.5), z, 3.4, p.fadeAt(z));
+      }
+    }
+    if (marker != null) {
+      for (var dz = startDz + 6; dz < farDz * 0.6; dz += markerSpacing) {
+        final z = p.camZ + dz;
+        draw(marker, -(Tune.trackHalf + 0.42), z, 0.8, p.fadeAt(z));
+      }
+    }
   }
 
   void _fill(

@@ -18,6 +18,10 @@ class GameAssets {
   static const ballastKey = 'ballast';
   static const grassKey = 'grass';
   static const concreteKey = 'concrete';
+  static const sleeperKey = 'sleeper';
+  static const railHeadKey = 'rail_head';
+  static const dustKey = 'dust';
+  static const rollKey = 'roll';
   static const coinKey = 'coin';
 
   /// Runner animation frames, in order.
@@ -32,9 +36,18 @@ class GameAssets {
     ballastKey: 'assets/sprites/texture_ballast.jpg',
     grassKey: 'assets/sprites/texture_grass.jpg',
     concreteKey: 'assets/sprites/texture_concrete.jpg',
+    sleeperKey: 'assets/sprites/texture_sleeper.jpg',
+    railHeadKey: 'assets/sprites/texture_rail_head.jpg',
+    'prop_signal': 'assets/sprites/prop_signal.png',
+    'prop_catenary': 'assets/sprites/prop_catenary.png',
+    'prop_marker': 'assets/sprites/prop_marker.png',
     'runner_run_0': 'assets/sprites/runner_run_0.png',
     'runner_run_1': 'assets/sprites/runner_run_1.png',
     'runner_air': 'assets/sprites/runner_air.png',
+    'runner_run_2': 'assets/sprites/runner_run_2.png',
+    'runner_run_3': 'assets/sprites/runner_run_3.png',
+    'runner_roll': 'assets/sprites/runner_roll.png',
+    'dust': 'assets/sprites/dust.png',
     'barrier_low': 'assets/sprites/barrier_low.png',
     'barrier_high': 'assets/sprites/barrier_high.png',
     'train': 'assets/sprites/train.png',
@@ -49,6 +62,12 @@ class GameAssets {
 
   ui.Image get skyline => _sprites[skylineKey]!;
   ui.Image get airFrame => _sprites['runner_air']!;
+
+  /// The tucked roll pose; the painter falls back to the air frame when the
+  /// dedicated roll sprite is missing.
+  ui.Image? get rollFrame => _sprites['runner_roll'];
+
+  ui.Image? get dust => _sprites['dust'];
   List<ui.Image> get runFrames =>
       runFrameKeys.map((k) => _sprites[k]).whereType<ui.Image>().toList();
 

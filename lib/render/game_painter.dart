@@ -77,7 +77,7 @@ class GamePainter extends CustomPainter {
     _paintObstacles(canvas, p);
     _paintCoins(canvas, p);
     _paintRunner(canvas, p);
-    view.particles.paint(canvas, p, size);
+    view.particles.paint(canvas, p, size, view.assets);
     view.particles.paintPopups(canvas, p);
     _paintSpeedStreaks(canvas, size);
     canvas.restore();
@@ -392,8 +392,8 @@ class GamePainter extends CustomPainter {
         : r.isAirborne
             ? assets.airFrame
             : r.isRolling
-                ? assets.airFrame
-                : assets.runFrames[r.runFrameIndex];
+                ? (assets.rollFrame ?? assets.airFrame)
+                : assets.runFrames[r.runFrameIndexFor(assets.runFrames.length)];
 
     if (image != null) {
       final h = Tune.runnerHeight * feet.scale * (r.isRolling ? 0.8 : 1.03);
